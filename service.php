@@ -55,8 +55,7 @@
         if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
         else
         {
-          $authorString = explode(" ", trim($item->filter($authorSel)->text()));
-          $author = substr($authorString[1], 1, strpos($authorString[1], ")") - 1) . " ({$authorString[0]})";
+          $author = $item->filter($authorSel)->text();
         }
 
         /* traverse and show all the categories of the <item>
