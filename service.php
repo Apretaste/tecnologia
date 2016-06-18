@@ -1,5 +1,5 @@
 <?php
-	use Goutte\Client;
+  use Goutte\Client;
 
   class tecnologia extends Service {
     
