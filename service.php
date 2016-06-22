@@ -48,10 +48,8 @@
           return $category->text();
           });
 
-        /* get the author
-         * TODO: fix this
-         */
-        $authorSel = 'dc\:creator';
+        // get the author
+        $authorSel = 'dc|creator';
         if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
         else
         {
