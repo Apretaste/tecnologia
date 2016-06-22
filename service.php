@@ -38,11 +38,17 @@
 
         // get title, description, pubDate, and category
         $title = $item->filter('title')->text();
-        /* get the description
+
+        // get the description
+        $description = $item->filter('content|encoded')->text();
+
+        // get the publication date
+        $pubDate = $item->filter('pubDate')->text();
+
+        /*
+         * get category
          * TODO: improve this
          */
-        $description = $item->filter('description')->text();
-        $pubDate = $item->filter('pubDate')->text();
         $category = $item->filter('category')->each(
           function ($category, $j) {
           return $category->text();
