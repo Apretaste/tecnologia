@@ -12,8 +12,8 @@
     }
 
     /**
-     * Get all stories from FayerWayer.com, the biggest
-     * tech blog of Latin America. 
+     * Get all stories from Conectica.com, a
+     * tech blog from Latin America. 
      *
      * @return Array
      */
@@ -25,7 +25,7 @@
       $client->setClient($guzzle);
 
       // create a crawler
-      $crawler = $client->request('GET', "http://feeds.feedburner.com/fayerwayer?format=xml");
+      $crawler = $client->request('GET', "http://feeds.feedburner.com/feedconectica?format=xml");
 
       $articles = array();
       $crawler->filter('item')->each(function($item, $i) use (&$articles)
