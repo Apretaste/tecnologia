@@ -144,9 +144,13 @@
       // the text
       $text = $crawler->filter('#the_content')->html();
 
+      // the author's info
+      $author = $crawler->filter('#data_author > p')->text();
+
       return array(
         'title' => $title,
         'text' => $text,
+        'author' => $author,
         'url' => "http://conectica.com/$query"
       );
     }
