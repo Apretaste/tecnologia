@@ -11,10 +11,48 @@
       return $response;
     }
 
+    /* 
+     * Subservice _historia to call the view of
+     * a single post()
+     *
+     * @see tecnologia::post()
+     * @param Request
+     * @return Response 
+     */
+
+    public function _historia(Request $request)
+    {
+      // entries must have content 
+      if (empty($request->query))
+      {
+        $response = new Response();
+        $response->setResponseSubject("B&uacute;squeda en blanco");
+        $response->createFromText("Su b&uacute;squeda parece estar en blanco, debe decirnos qu&eacute; art&iacute;culo desea leer");
+        return $response;
+      }
+
+      // explode the query string every '/' 
+      $pieces = explode("/", $request->query);
+
+      // call to parse the post
+      $responseContent = $this->post($request->query);
+
+      // subject changes when user comes from the main menu or from buscar 
+      if(strlen($pieces[1]) > 5) $subject = str_replace("-", " ", ucfirst($pieces[1]));
+      else $subject = "La historia que pidi&oacute;";
+
+      // send the response
+      $response = new Response();
+      $response->setResponseSubject($subject);
+      $response->createFromTemplate("historia.tpl", $responseContent, $images);
+      return $response;
+    }
+
     /**
      * Get all stories from Conectica.com, a
      * tech blog from Latin America. 
      *
+     * @link http://conectica.com/
      * @return Array
      */
     private function allStories()
@@ -31,7 +69,7 @@
       $crawler->filter('item')->each(function($item, $i) use (&$articles)
       {
         // the link to the article
-        $link = $this->urlSplit($item->filter('link')->text());
+        $link = $this->urlSplit($item->filter('feedburner|origLink')->text());
 
         // show only the content part of the link
         $pieces = explode("/", $link);
@@ -45,10 +83,7 @@
         // get the publication date
         $pubDate = $item->filter('pubDate')->text();
 
-        /*
-         * get category
-         * TODO: improve this
-         */
+        // get category
         $category = $item->filter('category')->each(
           function ($category, $j) {
           return $category->text();
@@ -62,9 +97,7 @@
           $author = $item->filter($authorSel)->text();
         }
 
-        /* traverse and show all the categories of the <item>
-         * TODO: fix this
-         */
+        // traverse and show all the categories of the <item>
         $categoryLink = array();
         foreach($category as $currCategory)
         {
@@ -86,6 +119,37 @@
       return array("articles" => $articles);
     }
 
+    /*
+     * Parse individual posts  
+     *
+     * @param String
+     * @return Array
+     */
+
+    private function post($query) 
+    {
+
+      // create a new Client
+      $client = new Client();
+      $guzzle = $client->getClient();
+      $guzzle->setDefaultOption('verify', true);
+      $client->setClient($guzzle);
+
+      // the crawler
+      $crawler = $client->request('GET', "http://www.conectica.com/$query");
+
+      // the title
+      $title = $crawler->filter('h1')->text();
+
+      // the text
+      $text = $crawler->filter('#the_content')->html();
+
+      return array(
+        'title' => $title,
+        'text' => $text,
+        'url' => "http://conectica.com/$query"
+      );
+    }
 
     /**
      * Get the link to the news starting from the /content part 
