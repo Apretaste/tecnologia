@@ -11,7 +11,7 @@
       return $response;
     }
 
-    /* 
+    /** 
      * Subservice _historia to call the view of
      * a single post()
      *
@@ -119,7 +119,7 @@
       return array("articles" => $articles);
     }
 
-    /*
+    /**
      * Parse individual posts  
      *
      * @param String
