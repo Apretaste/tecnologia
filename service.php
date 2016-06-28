@@ -49,6 +49,48 @@
     }
 
     /**
+     * Subservice to search articles
+     *
+     * @see tecnologia::search()
+     * @param Request
+     * @return Response
+     */
+
+    public function _buscar(Request $request)
+    {
+      // don't allow empty entries
+      if (empty($request->query))
+      {
+        $response = new Response();
+        $response->setResponseSubject("B&uacute;squeda en blanco");
+        $response->createFromText("Su b&uacute;squeda parece estar en blanco, debe decirnos sobre qu&eacute; tema desea leer");
+        return $response;
+      }
+
+      // the query dictates what is going to be search()-ed
+      $articles = $this->search($request->query);
+      // if the search is empty
+      if(empty($articles))
+      {
+        $failed[] = array();
+        $response = new Response();
+        $response->setResponseSubject("Su b&uacute;squeda no gener&oacute; resultados");
+        $response->createFromTemplate("noArticles.tpl", $failed);
+        return $response;
+      }
+      
+      $responseContent = array(
+        "articles" => $articles,
+        "search" => $request->query
+      );
+
+      $response = new Response();
+      $response->setResponseSubject("Buscar: " . $request->query);
+      $response->createFromTemplate("searchArticles.tpl", $responseContent);
+      return $response;
+    }
+
+    /**
      * Get all stories from Conectica.com, a
      * tech blog from Latin America. 
      *
@@ -117,6 +159,51 @@
       });
 
       return array("articles" => $articles);
+    }
+
+    /**
+     * Search articles matching the $query
+     *
+     * @param String
+     * @return Array
+     */
+
+    private function search($query)
+    {
+      // create a new Client
+      $client = new Client();
+      $url = "http://www.conectica.com/?s=".urlencode($query);
+      $crawler = $client->request('GET', $url);
+
+      // collect the posts that match with the search
+      $articles = array();
+      $crawler->filter('#post_content_left .post')->each(function ($item, $i) use (&$articles)
+      {
+        // get data from the posts
+        /*
+         * TODO: fix this
+         */
+        $date = $item->filter('.post_content > .din > .din_medium')->text();
+        $title = $item->filter('.post_content h2')->text();
+        $description = $item->filter('.post_content .excerpt')->text();
+        $author = $item->filter('.post_content .author')->text();
+        
+        // the URL
+        $preLink = $item->filter('a')->attr('href');
+
+        // the actual service-friendly link
+        $link = $this->urlSplit($preLink);
+
+        // store the article
+        $articles[] = array(
+          "pubDate" => $date,
+          "title" => $title,
+          "description" => $description,
+          "author" => $author,
+          "link" => $link
+        );
+      });
+      return $articles;
     }
 
     /**
