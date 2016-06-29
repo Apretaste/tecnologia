@@ -44,7 +44,7 @@
       // send the response
       $response = new Response();
       $response->setResponseSubject($subject);
-      $response->createFromTemplate("historia.tpl", $responseContent, $images);
+      $response->createFromTemplate("historia.tpl", $responseContent);
       return $response;
     }
 
@@ -90,6 +90,35 @@
       return $response;
     }
 
+		/**
+		 * Subservice to get a list of articles by category 
+		 *
+     * @see tecnologia::listByCategory()
+		 * @param Request
+		 * @return Response
+		 */
+
+		public function _categoria(Request $request)
+		{
+			if (empty($request->query))
+			{
+				$response = new Response();
+				$response->setResponseSubject("Categor&iacute;a en blanco");
+				$response->createFromText("Su b&uacute;squeda parece estar en blanco, debe decirnos sobre qu&eacute; categor&iacute;a desea leer");
+				return $response;
+			}
+
+			$responseContent = array(
+				"articles" => $this->listByCategory($request->query)["articles"],
+				"category" => $request->query
+			);
+
+			$response = new Response();
+			$response->setResponseSubject("Categor&iacute;a: " . $request->query);
+			$response->createFromTemplate("catArticles.tpl", $responseContent);
+			return $response;
+		}
+
     /**
      * Get all stories from Conectica.com, a
      * tech blog from Latin America. 
@@ -97,6 +126,7 @@
      * @link http://conectica.com/
      * @return Array
      */
+
     private function allStories()
     {
       // create a new Client
@@ -204,6 +234,63 @@
         );
       });
       return $articles;
+    }
+
+    /**
+     * Collect the array of news by category
+     *
+     * @param String
+     * @return Array
+     */
+
+    private function listByCategory($query)
+    {
+      // setup new Client
+      $client = new Client();
+      $crawler = $client->request('GET', "http://feeds.feedburner.com/feedconectica?format=xml");
+
+      // filter every item
+      $articles = array();
+      $crawler->filter('channel item')->each(function ($item, $i) use (&$articles, $query)
+      {
+        // filter by category, and add it to the list of articles to show
+        $item->filter('category')->each(function ($cat, $i) use (&$articles, &$query, &$item) 
+        {
+          if($cat->text() == $query)
+          {
+            // get the title
+            $title = $item->filter('title')->text();
+
+            // get the the link, then urlSplit()-it
+            $link = $this->urlSplit($item->filter('feedburner|origLink')->text());
+
+            // get the publication date
+            $pubDate = $item->filter('pubDate')->text();
+
+            // get the description of the item
+            $description = $item->filter('content|encoded')->text();
+
+            // get the author, else unknow
+            $authorSel = 'dc|creator';
+            if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
+            else
+            {
+              $author = $item->filter($authorSel)->text();
+            }
+
+            $articles[] = array(
+              "title" => $title,
+              "link" => $link,
+              "pubDate" => $pubDate,
+              "description" => $description,
+              "author" => $author
+            );
+          } 
+        });
+      });
+
+      // Return Response array
+      return array("articles" => $articles);
     }
 
     /**
