@@ -149,8 +149,10 @@
         // get title, description, pubDate, and category
         $title = $item->filter('title')->text();
 
-        // get the description
-        $description = $item->filter('content|encoded')->text();
+        // get the text of the description 
+        $text = $item->filter('content|encoded')->text();
+        // strip all images from the description string
+        $description = preg_replace("/<\/?img[^>]*\>/i", "", $text); 
 
         // get the publication date
         $pubDate = $item->filter('pubDate')->text();
@@ -215,7 +217,8 @@
          */
         $date = $item->filter('.post_content > .din > .din_medium')->text();
         $title = $item->filter('.post_content h2')->text();
-        $description = $item->filter('.post_content .excerpt')->text();
+        $text = $item->filter('.post_content .excerpt')->text();
+        $description = preg_replace("/<\/?img[^>]*\>/i", "", $text); 
         $author = $item->filter('.post_content .author')->text();
         
         // the URL
@@ -268,7 +271,8 @@
             $pubDate = $item->filter('pubDate')->text();
 
             // get the description of the item
-            $description = $item->filter('content|encoded')->text();
+            $text = $item->filter('content|encoded')->text();
+            $description = preg_replace("/<\/?img[^>]*\>/i", "", $text);  
 
             // get the author, else unknow
             $authorSel = 'dc|creator';
