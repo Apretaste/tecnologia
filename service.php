@@ -26,8 +26,8 @@
       if (empty($request->query))
       {
         $response = new Response();
-        $response->setResponseSubject("B&uacute;squeda en blanco");
-        $response->createFromText("Su b&uacute;squeda parece estar en blanco, debe decirnos qu&eacute; art&iacute;culo desea leer");
+        $response->setResponseSubject("Búsqueda en blanco");
+        $response->createFromText("Su búsqueda parece estar en blanco, debe decirnos qué artículo desea leer");
         return $response;
       }
 
@@ -39,7 +39,7 @@
 
       // subject changes when user comes from the main menu or from buscar 
       if(strlen($pieces[1]) > 5) $subject = str_replace("-", " ", ucfirst($pieces[1]));
-      else $subject = "La historia que pidi&oacute;";
+      else $subject = "La historia que pidió";
 
       // send the response
       $response = new Response();
@@ -62,8 +62,8 @@
       if (empty($request->query))
       {
         $response = new Response();
-        $response->setResponseSubject("B&uacute;squeda en blanco");
-        $response->createFromText("Su b&uacute;squeda parece estar en blanco, debe decirnos sobre qu&eacute; tema desea leer");
+        $response->setResponseSubject("Búsqueda en blanco");
+        $response->createFromText("Su búsqueda parece estar en blanco, debe decirnos sobre qué tema desea leer");
         return $response;
       }
 
@@ -74,7 +74,7 @@
       {
         $failed[] = array();
         $response = new Response();
-        $response->setResponseSubject("Su b&uacute;squeda no gener&oacute; resultados");
+        $response->setResponseSubject("Su búsqueda no generó resultados");
         $response->createFromTemplate("noArticles.tpl", $failed);
         return $response;
       }
@@ -103,8 +103,8 @@
 			if (empty($request->query))
 			{
 				$response = new Response();
-				$response->setResponseSubject("Categor&iacute;a en blanco");
-				$response->createFromText("Su b&uacute;squeda parece estar en blanco, debe decirnos sobre qu&eacute; categor&iacute;a desea leer");
+				$response->setResponseSubject("Categoría en blanco");
+				$response->createFromText("Su búsqueda parece estar en blanco, debe decirnos sobre qué categoría desea leer");
 				return $response;
 			}
 
@@ -321,14 +321,17 @@
 
       // the text
       $text = $crawler->filter('#the_content')->html();
+      // get the description of the item
+      $text = preg_replace("/<li[^>]+\>/i","", $text);  
+      $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
 
       // the author's info
       $author = $crawler->filter('#data_author > p')->text();
 
       return array(
         'title' => $title,
-        'text' => $text,
         'author' => $author,
+        'description' => $description,
         'url' => "http://conectica.com/$query"
       );
     }
