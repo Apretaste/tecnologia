@@ -322,6 +322,7 @@
       // the text
       $text = $crawler->filter('#the_content')->html();
       // get the description of the item
+      $text = preg_replace('@<(h3|a)[^>]*class\s*=[^>]*>.*?</\1>@is', "", $text);
       $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
 
       // the author's info
