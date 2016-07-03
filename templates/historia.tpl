@@ -1,7 +1,7 @@
 <h1>{$title}</h1>
 
 <div class="content">
-  <p>{$text}</p>
+  <p>{$description}</p>
   <font color="grey"><strong>Escrito {$author}.</strong></font>
 </div>
 
