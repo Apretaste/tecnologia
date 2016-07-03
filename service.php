@@ -151,8 +151,9 @@
 
         // get the text of the description 
         $text = $item->filter('content|encoded')->text();
-        // strip all images from the description string
-        $description = preg_replace("/<\/?img[^>]*\>/i", "", $text); 
+        // strip all images and videos from the description string
+        $text = preg_replace("/<\/?(img|iframe)[^>]*\>/i", "", $text); 
+        $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
 
         // get the publication date
         $pubDate = $item->filter('pubDate')->text();
@@ -218,7 +219,8 @@
         $date = $item->filter('.post_content > .din > .din_medium')->text();
         $title = $item->filter('.post_content h2')->text();
         $text = $item->filter('.post_content .excerpt')->text();
-        $description = preg_replace("/<\/?img[^>]*\>/i", "", $text); 
+        $text = preg_replace("/<\/?(img|iframe)[^>]*\>/i", "", $text); 
+        $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
         $author = $item->filter('.post_content .author')->text();
         
         // the URL
@@ -272,7 +274,8 @@
 
             // get the description of the item
             $text = $item->filter('content|encoded')->text();
-            $description = preg_replace("/<\/?img[^>]*\>/i", "", $text);  
+            $text = preg_replace("/<\/?(img|iframe)[^>]*\>/i", "", $text);  
+            $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
 
             // get the author, else unknow
             $authorSel = 'dc|creator';
