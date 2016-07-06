@@ -152,8 +152,7 @@
         // get the text of the description 
         $text = $item->filter('content|encoded')->text();
         // strip all images and videos from the description string
-        $text = preg_replace("/<\/?(img|iframe)[^>]*\>/i", "", $text); 
-        $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
+        $description = strip_tags($text, '<p>');
 
         // get the publication date
         $pubDate = $item->filter('pubDate')->text();
@@ -220,9 +219,8 @@
 
         // get the text of the post 
         $text = $item->filter('.post_content .excerpt')->text();
-        $text = preg_replace("/<\/?(img|iframe)[^>]*\>/i", "", $text); 
         // turn it to be actual description
-        $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
+        $description = strip_tags($text, '<p>');
 
         // get the author
         $author = $item->filter('.post_content .author')->text();
@@ -278,8 +276,7 @@
 
             // get the description of the item
             $text = $item->filter('content|encoded')->text();
-            $text = preg_replace("/<\/?(img|iframe)[^>]*\>/i", "", $text);  
-            $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
+            $description = strip_tags($text, '<p>');
 
             // get the author, else unknow
             $authorSel = 'dc|creator';
@@ -313,7 +310,6 @@
 
     private function post($query) 
     {
-
       // create a new Client
       $client = new Client();
       $guzzle = $client->getClient();
@@ -330,7 +326,7 @@
       $text = $crawler->filter('#the_content')->html();
       // get the description of the item
       $text = preg_replace('@<(h3|a)[^>]*class\s*=[^>]*>.*?</\1>@is', "", $text);
-      $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
+      $description = strip_tags($text, '<p><strong><h1><h2><h3><h4>');
 
       // the author's info
       $author = $crawler->filter('#data_author > p')->text();

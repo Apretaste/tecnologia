@@ -4,9 +4,7 @@
   <p>{$description}</p>
   <font color="grey"><strong>Escrito {$author}.</strong></font>
 </div>
-
-{space5}
-
+{space15}
 <center>
 	{button href="tecnologia" caption="M&aacute;s noticias"}
 	{button href="pizarra Miren esto: {$url}" caption="Compartir" color="grey"}
