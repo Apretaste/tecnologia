@@ -213,14 +213,18 @@
       $crawler->filter('#post_content_left .post')->each(function ($item, $i) use (&$articles)
       {
         // get data from the posts
-        /*
-         * TODO: fix this
-         */
         $date = $item->filter('.post_content > .din > .din_medium')->text();
+
+        // get title of the post
         $title = $item->filter('.post_content h2')->text();
+
+        // get the text of the post 
         $text = $item->filter('.post_content .excerpt')->text();
         $text = preg_replace("/<\/?(img|iframe)[^>]*\>/i", "", $text); 
+        // turn it to be actual description
         $description = strip_tags($text, '<p><a><strong><h1><h2><h4>');
+
+        // get the author
         $author = $item->filter('.post_content .author')->text();
         
         // the URL
@@ -345,6 +349,7 @@
      * @param String
      * @return String
      */
+
     private function urlSplit($url)
     {
       $url = explode("/", trim($url));
