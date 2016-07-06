@@ -9,7 +9,7 @@
 {foreach from=$articles item=article name=arts}
 	<b>{link href="tecnologia historia {$article['link']}" caption="{$article['title']}"}</b><br/>
   {space5}
-  {$article['description']|html_substr:300:" ... "} 
+  {$article['description']|strip_tags|truncate:200:"..."}<br/>
 	<small>
 		<font color="gray">{$article['author']} — {$article['pubDate']|date_format}</font>
 		<br/>
