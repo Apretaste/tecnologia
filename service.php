@@ -136,58 +136,67 @@
 
       // create a crawler
       $crawler = $client->request('GET', "http://feeds.feedburner.com/feedconectica?format=xml");
-
+      $nodeCount = 0;
       $articles = array();
-      $crawler->filter('item')->each(function($item, $i) use (&$articles)
+      $crawler->filter('item')->each(function($item, $i) use (&$articles, &$nodeCount)
       {
-        // the link to the article
-        $link = $this->urlSplit($item->filter('feedburner|origLink')->text());
+        // we only want the first 15 nodes
+        while ($nodeCount < 15) {
 
-        // show only the content part of the link
-        $pieces = explode("/", $link);
+          // count a post
+          $nodeCount++;
 
-        // get title, description, pubDate, and category
-        $title = $item->filter('title')->text();
+          // the link to the article
+          $link = $this->urlSplit($item->filter('feedburner|origLink')->text());
 
-        // get the text of the description 
-        $text = $item->filter('content|encoded')->text();
-        // strip all images and videos from the description string
-        $description = strip_tags($text, '<p>');
+          // show only the content part of the link
+          $pieces = explode("/", $link);
 
-        // get the publication date
-        $pubDate = $item->filter('pubDate')->text();
+          // get title, description, pubDate, and category
+          $title = $item->filter('title')->text();
 
-        // get category
-        $category = $item->filter('category')->each(
-          function ($category, $j) {
-          return $category->text();
-          });
+          // get the text of the description 
+          $text = $item->filter('content|encoded')->text();
+          // strip all images and videos from the description string
+          $description = strip_tags($text, '<p>');
 
-        // get the author
-        $authorSel = 'dc|creator';
-        if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
-        else
-        {
-          $author = $item->filter($authorSel)->text();
+          // get the publication date
+          $pubDate = $item->filter('pubDate')->text();
+
+          // get category
+          $category = $item->filter('category')->each(
+            function ($category, $j) {
+            return $category->text();
+            });
+
+          // get the author
+          $authorSel = 'dc|creator';
+          if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
+          else
+          {
+            $author = $item->filter($authorSel)->text();
+          }
+
+          // traverse and show all the categories of the <item>
+          $categoryLink = array();
+          foreach($category as $currCategory)
+          {
+            $categoryLink[] = $currCategory;
+          }
+
+          // finally set everything
+          $articles[] = array(
+            "title" => $title,
+            "link" => $link,
+            "pubDate" => $pubDate,
+            "description" => $description,
+            "category" => $category,
+            "categoryLink" => $categoryLink,
+            "author" => $author
+          );
+
+          return;
         }
-
-        // traverse and show all the categories of the <item>
-        $categoryLink = array();
-        foreach($category as $currCategory)
-        {
-          $categoryLink[] = $currCategory;
-        }
-
-        // finally set everything
-        $articles[] = array(
-          "title" => $title,
-          "link" => $link,
-          "pubDate" => $pubDate,
-          "description" => $description,
-          "category" => $category,
-          "categoryLink" => $categoryLink,
-          "author" => $author
-        );
       });
 
       return array("articles" => $articles);
