@@ -1,367 +1,399 @@
 <?php
-  use Goutte\Client;
 
-  class tecnologia extends Service {
-    
-    public function _main(Request $request)
-    {
-      $response = new Response();
-      $response->setResponseSubject("Noticias de tecnología");
-      $response->createFromTemplate("basic.tpl", $this->allStories());
-      return $response;
-    }
+use Goutte\Client;
 
-    /** 
-     * Subservice _historia to call the view of
-     * a single post()
-     *
-     * @see tecnologia::post()
-     * @param Request
-     * @return Response 
-     */
+class tecnologia extends Service
+{
+	public function _main(Request $request)
+	{
+		try{
+			$allStories = $this->allStories();
+		} catch(Exception $e) {
+			return $this->respondWithError();
+		}
 
-    public function _historia(Request $request)
-    {
-      // entries must have content 
-      if (empty($request->query))
-      {
-        $response = new Response();
-        $response->setResponseSubject("Búsqueda en blanco");
-        $response->createFromText("Su búsqueda parece estar en blanco, debe decirnos qué artículo desea leer");
-        return $response;
-      }
+		$response = new Response();
+		$response->setResponseSubject("Noticias de tecnología");
+		$response->createFromTemplate("basic.tpl", $allStories);
+		return $response;
+	}
 
-      // explode the query string every '/' 
-      $pieces = explode("/", $request->query);
+	/**
+	 * Subservice _historia to call the view of
+	 * a single post()
+	 *
+	 * @see tecnologia::post()
+	 * @param Request
+	 * @return Response
+	 */
 
-      // call to parse the post
-      $responseContent = $this->post($request->query);
-
-      // subject changes when user comes from the main menu or from buscar 
-      if(strlen($pieces[1]) > 5) $subject = str_replace("-", " ", ucfirst($pieces[1]));
-      else $subject = "La historia que pidió";
-
-      // send the response
-      $response = new Response();
-      $response->setResponseSubject($subject);
-      $response->createFromTemplate("historia.tpl", $responseContent);
-      return $response;
-    }
-
-    /**
-     * Subservice to search articles
-     *
-     * @see tecnologia::search()
-     * @param Request
-     * @return Response
-     */
-
-    public function _buscar(Request $request)
-    {
-      // don't allow empty entries
-      if (empty($request->query))
-      {
-        $response = new Response();
-        $response->setResponseSubject("Búsqueda en blanco");
-        $response->createFromText("Su búsqueda parece estar en blanco, debe decirnos sobre qué tema desea leer");
-        return $response;
-      }
-
-      // the query dictates what is going to be search()-ed
-      $articles = $this->search($request->query);
-      // if the search is empty
-      if(empty($articles))
-      {
-        $failed[] = array();
-        $response = new Response();
-        $response->setResponseSubject("Su búsqueda no generó resultados");
-        $response->createFromTemplate("noArticles.tpl", $failed);
-        return $response;
-      }
-      
-      $responseContent = array(
-        "articles" => $articles,
-        "search" => $request->query
-      );
-
-      $response = new Response();
-      $response->setResponseSubject("Buscar: " . $request->query);
-      $response->createFromTemplate("searchArticles.tpl", $responseContent);
-      return $response;
-    }
-
-		/**
-		 * Subservice to get a list of articles by category 
-		 *
-     * @see tecnologia::listByCategory()
-		 * @param Request
-		 * @return Response
-		 */
-
-		public function _categoria(Request $request)
+	public function _historia(Request $request)
+	{
+		// entries must have content
+		if (empty($request->query))
 		{
-			if (empty($request->query))
-			{
-				$response = new Response();
-				$response->setResponseSubject("Categoría en blanco");
-				$response->createFromText("Su búsqueda parece estar en blanco, debe decirnos sobre qué categoría desea leer");
-				return $response;
-			}
-
-			$responseContent = array(
-				"articles" => $this->listByCategory($request->query)["articles"],
-				"category" => $request->query
-			);
-
 			$response = new Response();
-			$response->setResponseSubject("Categor&iacute;a: " . $request->query);
-			$response->createFromTemplate("catArticles.tpl", $responseContent);
+			$response->setResponseSubject("Búsqueda en blanco");
+			$response->createFromText("Su búsqueda parece estar en blanco, debe decirnos qué artículo desea leer");
 			return $response;
 		}
 
-    /**
-     * Get all stories from Conectica.com, a
-     * tech blog from Latin America. 
-     *
-     * @link http://conectica.com/
-     * @return Array
-     */
+		// explode the query string every '/'
+		$pieces = explode("/", $request->query);
 
-    private function allStories()
-    {
-      // create a new Client
-      $client = new Client();
-      $guzzle = $client->getClient();
-      $client->setClient($guzzle);
+		// call to parse the post
+		try{
+			$responseContent = $this->post($request->query);
+		} catch(Exception $e) {
+			return $this->respondWithError();
+		}
 
-      // create a crawler
-      $crawler = $client->request('GET', "http://feeds.feedburner.com/feedconectica?format=xml");
-      $nodeCount = 0;
-      $articles = array();
-      $crawler->filter('item')->each(function($item, $i) use (&$articles, &$nodeCount)
-      {
-        // we only want the first 15 nodes
-        while ($nodeCount < 15) {
+		// subject changes when user comes from the main menu or from buscar
+		if(strlen($pieces[1]) > 5) $subject = str_replace("-", " ", ucfirst($pieces[1]));
+		else $subject = "La historia que pidió";
 
-          // count a post
-          $nodeCount++;
+		// send the response
+		$response = new Response();
+		$response->setResponseSubject($subject);
+		$response->createFromTemplate("historia.tpl", $responseContent);
+		return $response;
+	}
 
-          // the link to the article
-          $link = $this->urlSplit($item->filter('feedburner|origLink')->text());
+	/**
+	 * Subservice to search articles
+	 *
+	 * @see tecnologia::search()
+	 * @param Request
+	 * @return Response
+	 */
 
-          // show only the content part of the link
-          $pieces = explode("/", $link);
+	public function _buscar(Request $request)
+	{
+		// don't allow empty entries
+		if (empty($request->query))
+		{
+			$response = new Response();
+			$response->setResponseSubject("Búsqueda en blanco");
+			$response->createFromText("Su búsqueda parece estar en blanco, debe decirnos sobre qué tema desea leer");
+			return $response;
+		}
 
-          // get title, description, pubDate, and category
-          $title = $item->filter('title')->text();
+		// search by the query
+		try{
+			$articles = $this->search($request->query);
+		} catch(Exception $e) {
+			return $this->respondWithError();
+		}
 
-          // get the text of the description 
-          $text = $item->filter('content|encoded')->text();
-          // strip all images and videos from the description string
-          $description = strip_tags($text, '<p>');
+		// if the search is empty
+		if(empty($articles))
+		{
+			$failed[] = array();
+			$response = new Response();
+			$response->setResponseSubject("Su búsqueda no generó resultados");
+			$response->createFromTemplate("noArticles.tpl", $failed);
+			return $response;
+		}
 
-          // get the publication date
-          $pubDate = $item->filter('pubDate')->text();
+		$responseContent = array(
+			"articles" => $articles,
+			"search" => $request->query
+		);
 
-          // get category
-          $category = $item->filter('category')->each(
-            function ($category, $j) {
-            return $category->text();
-            });
+		$response = new Response();
+		$response->setResponseSubject("Buscar: " . $request->query);
+		$response->createFromTemplate("searchArticles.tpl", $responseContent);
+		return $response;
+	}
 
-          // get the author
-          $authorSel = 'dc|creator';
-          if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
-          else
-          {
-            $author = $item->filter($authorSel)->text();
-          }
+	/**
+	 * Subservice to get a list of articles by category
+	 *
+	 * @see tecnologia::listByCategory()
+	 * @param Request
+	 * @return Response
+	 */
+	public function _categoria(Request $request)
+	{
+		if (empty($request->query))
+		{
+			$response = new Response();
+			$response->setResponseSubject("Categoría en blanco");
+			$response->createFromText("Su búsqueda parece estar en blanco, debe decirnos sobre qué categoría desea leer");
+			return $response;
+		}
 
-          // traverse and show all the categories of the <item>
-          $categoryLink = array();
-          foreach($category as $currCategory)
-          {
-            $categoryLink[] = $currCategory;
-          }
+		// search by the query
+		try{
+			$articles = $this->listByCategory($request->query);
+		} catch(Exception $e) {
+			return $this->respondWithError();
+		}
 
-          // finally set everything
-          $articles[] = array(
-            "title" => $title,
-            "link" => $link,
-            "pubDate" => $pubDate,
-            "description" => $description,
-            "category" => $category,
-            "categoryLink" => $categoryLink,
-            "author" => $author
-          );
+		$responseContent = array(
+			"articles" => $articles["articles"],
+			"category" => $request->query
+		);
 
-          return;
-        }
-      });
+		$response = new Response();
+		$response->setResponseSubject("Categor&iacute;a: " . $request->query);
+		$response->createFromTemplate("catArticles.tpl", $responseContent);
+		return $response;
+	}
 
-      return array("articles" => $articles);
-    }
+	/**
+	 * Get all stories from Conectica.com, a
+	 * tech blog from Latin America.
+	 *
+	 * @link http://conectica.com/
+	 * @return Array
+	 */
+	private function allStories()
+	{
+		// create a new Client
+		$client = new Client();
+		$guzzle = $client->getClient();
+		$client->setClient($guzzle);
 
-    /**
-     * Search articles matching the $query
-     *
-     * @param String
-     * @return Array
-     */
+		// create a crawler
+		$crawler = $client->request('GET', "http://feeds.feedburner.com/feedconectica?format=xml");
 
-    private function search($query)
-    {
-      // create a new Client
-      $client = new Client();
-      $url = "http://www.conectica.com/?s=".urlencode($query);
-      $crawler = $client->request('GET', $url);
+		$nodeCount = 0;
+		$articles = array();
+		$crawler->filter('item')->each(function($item, $i) use (&$articles, &$nodeCount)
+		{
+			// we only want the first 15 nodes
+			while ($nodeCount < 15)
+			{
+				// count a post
+				$nodeCount++;
 
-      // collect the posts that match with the search
-      $articles = array();
-      $crawler->filter('#post_content_left .post')->each(function ($item, $i) use (&$articles)
-      {
-        // get data from the posts
-        $date = $item->filter('.post_content > .din > .din_medium')->text();
+				// the link to the article
+				$link = $this->urlSplit($item->filter('feedburner|origLink')->text());
 
-        // get title of the post
-        $title = $item->filter('.post_content h2')->text();
+				// show only the content part of the link
+				$pieces = explode("/", $link);
 
-        // get the text of the post 
-        $text = $item->filter('.post_content .excerpt')->text();
-        // turn it to be actual description
-        $description = strip_tags($text, '<p>');
+				// get title, description, pubDate, and category
+				$title = $item->filter('title')->text();
 
-        // get the author
-        $author = $item->filter('.post_content .author')->text();
-        
-        // the URL
-        $preLink = $item->filter('a')->attr('href');
+				// get the text of the description
+				$text = $item->filter('content|encoded')->text();
+				// strip all images and videos from the description string
+				$description = strip_tags($text, '<p>');
 
-        // the actual service-friendly link
-        $link = $this->urlSplit($preLink);
+				// get the publication date
+				$pubDate = $item->filter('pubDate')->text();
 
-        // store the article
-        $articles[] = array(
-          "pubDate" => $date,
-          "title" => $title,
-          "description" => $description,
-          "author" => $author,
-          "link" => $link
-        );
-      });
-      return $articles;
-    }
+				// get category
+				$category = $item->filter('category')->each(
+				function ($category, $j) {
+				return $category->text();
+				});
 
-    /**
-     * Collect the array of news by category
-     *
-     * @param String
-     * @return Array
-     */
+				// get the author
+				$authorSel = 'dc|creator';
+				if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
+				else
+				{
+				$author = $item->filter($authorSel)->text();
+				}
 
-    private function listByCategory($query)
-    {
-      // setup new Client
-      $client = new Client();
-      $crawler = $client->request('GET', "http://feeds.feedburner.com/feedconectica?format=xml");
+				// traverse and show all the categories of the <item>
+				$categoryLink = array();
+				foreach($category as $currCategory)
+				{
+				$categoryLink[] = $currCategory;
+				}
 
-      // filter every item
-      $articles = array();
-      $crawler->filter('channel item')->each(function ($item, $i) use (&$articles, $query)
-      {
-        // filter by category, and add it to the list of articles to show
-        $item->filter('category')->each(function ($cat, $i) use (&$articles, &$query, &$item) 
-        {
-          if($cat->text() == $query)
-          {
-            // get the title
-            $title = $item->filter('title')->text();
+				// finally set everything
+				$articles[] = array(
+					"title" => $title,
+					"link" => $link,
+					"pubDate" => $pubDate,
+					"description" => $description,
+					"category" => $category,
+					"categoryLink" => $categoryLink,
+					"author" => $author
+				);
+				return;
+			}
+		});
 
-            // get the the link, then urlSplit()-it
-            $link = $this->urlSplit($item->filter('feedburner|origLink')->text());
+		return array("articles" => $articles);
+	}
 
-            // get the publication date
-            $pubDate = $item->filter('pubDate')->text();
+	/**
+	 * Search articles matching the $query
+	 *
+	 * @param String
+	 * @return Array
+	 */
 
-            // get the description of the item
-            $text = $item->filter('content|encoded')->text();
-            $description = strip_tags($text, '<p>');
+	private function search($query)
+	{
+		// create a new Client
+		$client = new Client();
+		$url = "http://www.conectica.com/?s=".urlencode($query);
+		$crawler = $client->request('GET', $url);
 
-            // get the author, else unknow
-            $authorSel = 'dc|creator';
-            if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
-            else
-            {
-              $author = $item->filter($authorSel)->text();
-            }
+		// collect the posts that match with the search
+		$articles = array();
+		$crawler->filter('.grid_post')->each(function ($item, $i) use (&$articles)
+		{
+			// get data from the posts
+			$date = $item->filter('.authorDate')->text();
+			$date = strip_tags($date, '<a>');
 
-            $articles[] = array(
-              "title" => $title,
-              "link" => $link,
-              "pubDate" => $pubDate,
-              "description" => $description,
-              "author" => $author
-            );
-          } 
-        });
-      });
+			// get title of the post
+			$title = $item->filter('.grid_post_title a')->text();
 
-      // Return Response array
-      return array("articles" => $articles);
-    }
+			// get the author
+			$author = $item->filter('.authorDate a')->text();
 
-    /**
-     * Parse individual posts  
-     *
-     * @param String
-     * @return Array
-     */
+			// the URL
+			$preLink = $item->filter('.grid_post_title a')->attr('href');
 
-    private function post($query) 
-    {
-      // create a new Client
-      $client = new Client();
-      $guzzle = $client->getClient();
-      $guzzle->setDefaultOption('verify', true);
-      $client->setClient($guzzle);
+			// the actual service-friendly link
+			$link = $this->urlSplit($preLink);
 
-      // the crawler
-      $crawler = $client->request('GET', "http://www.conectica.com/$query");
+			// store the article
+			$articles[] = array(
+				"pubDate" => $date,
+				"title" => $title,
+				"author" => $author,
+				"link" => $link
+			);
+		});
+		return $articles;
+	}
 
-      // the title
-      $title = $crawler->filter('h1')->text();
+	/**
+	 * Collect the array of news by category
+	 *
+	 * @param String
+	 * @return Array
+	 */
+	private function listByCategory($query)
+	{
+		// setup new Client
+		$client = new Client();
+		$crawler = $client->request('GET', "http://feeds.feedburner.com/feedconectica?format=xml");
 
-      // the text
-      $text = $crawler->filter('#the_content')->html();
-      // get the description of the item
-      $text = preg_replace('@<(h3|a)[^>]*class\s*=[^>]*>.*?</\1>@is', "", $text);
-      $description = strip_tags($text, '<p><strong><h1><h2><h3><h4>');
+		// filter every item
+		$articles = array();
+		$crawler->filter('channel item')->each(function ($item, $i) use (&$articles, $query)
+		{
+			// filter by category, and add it to the list of articles to show
+			$item->filter('category')->each(function ($cat, $i) use (&$articles, &$query, &$item)
+			{
+				if($cat->text() == $query)
+				{
+					// get the title
+					$title = $item->filter('title')->text();
 
-      // the author's info
-      $author = $crawler->filter('#data_author > p')->text();
+					// get the the link, then urlSplit()-it
+					$link = $this->urlSplit($item->filter('feedburner|origLink')->text());
 
-      return array(
-        'title' => $title,
-        'author' => $author,
-        'description' => $description,
-        'url' => "http://conectica.com/$query"
-      );
-    }
+					// get the publication date
+					$pubDate = $item->filter('pubDate')->text();
 
-    /**
-     * Get the link to the news starting from the /content part 
-     *
-     * @param String
-     * @return String
-     */
+					// get the description of the item
+					$text = $item->filter('content|encoded')->text();
+					$description = strip_tags($text, '<p>');
 
-    private function urlSplit($url)
-    {
-      $url = explode("/", trim($url));
-      for ($i=0; $i < 3; $i++) {
-        unset($url[$i]);
-      }
-      return implode("/", $url);
-    }
-  }
+					// get the author, else unknow
+					$authorSel = 'dc|creator';
+					if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
+					else
+					{
+						$author = $item->filter($authorSel)->text();
+					}
+
+					$articles[] = array(
+						"title" => $title,
+						"link" => $link,
+						"pubDate" => $pubDate,
+						"description" => $description,
+						"author" => $author
+					);
+				}
+			});
+		});
+
+		// Return Response array
+		return array("articles" => $articles);
+	}
+
+	/**
+	 * Parse individual posts
+	 *
+	 * @param String
+	 * @return Array
+	 */
+
+	private function post($query)
+	{
+		// create a new Client
+		$client = new Client();
+		$guzzle = $client->getClient();
+		$guzzle->setDefaultOption('verify', true);
+		$client->setClient($guzzle);
+
+		// the crawler
+		$crawler = $client->request('GET', "http://www.conectica.com/$query");
+
+		// the title
+		$title = $crawler->filter('.singleHeader h1')->text();
+
+		// the text
+		$text = $crawler->filter('.postContent')->html();
+
+		// get the description of the item
+		$text = preg_replace('@<(h3|a)[^>]*class\s*=[^>]*>.*?</\1>@is', "", $text);
+		$description = strip_tags($text, '<p><strong><h1><h2><h3><h4>');
+
+		// the author's info
+		$author = $crawler->filter('address > a')->text();
+
+		return array(
+			'title' => $title,
+			'author' => $author,
+			'description' => $description,
+			'url' => "http://conectica.com/$query"
+		);
+	}
+
+	/**
+	 * Get the link to the news starting from the /content part
+	 *
+	 * @param String
+	 * @return String
+	 */
+
+	private function urlSplit($url)
+	{
+		$url = explode("/", trim($url));
+		for ($i=0; $i < 3; $i++) {
+		unset($url[$i]);
+		}
+		return implode("/", $url);
+	}
+
+	/**
+	 * Return a generic error email, usually for try...catch blocks
+	 *
+	 * @auhor salvipascual
+	 * @return Respose
+	 */
+	private function respondWithError()
+	{
+		error_log("WARNING: ERROR ON SERVICE TECNOLOGIA");
+
+		$response = new Response();
+		$response->setResponseSubject("Error en peticion");
+		$response->createFromText("Lo siento pero hemos tenido un error inesperado. Enviamos una peticion para corregirlo. Por favor intente nuevamente mas tarde.");
+		return $response;
+	}
+}
 ?>
