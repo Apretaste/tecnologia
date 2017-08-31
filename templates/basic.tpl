@@ -1,8 +1,8 @@
 <table width="100%">
 	<tr>
-		<td><h1>Noticias de tecnología de hoy</h1></td>
+		<td><h1>Noticias de tecnologia de hoy</h1></td>
 		<td align="right" valign="top">
-			{button href="TECNOLOGIA BUSCAR" popup="true" size="small" body="Complete el asunto agregando una palabra o frase a buscar a continuacion del texto TECNOLOGIA BUSCAR y envie este email" caption="&#10004; Buscar"}
+			{button href="TECNOLOGIA BUSCAR" popup="true" size="small" desc="Inserte una palabra o frase a buscar" caption="&#10004; Buscar"}
 		</td>
 	</tr>
 </table>

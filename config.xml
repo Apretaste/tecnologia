@@ -1,7 +1,7 @@
 <service>
 	<serviceName>tecnologia</serviceName>
 	<serviceDescription>Muestra las noticias de tecnologia de hoy</serviceDescription>
-	<creatorEmail>carlos@apretaste.com</creatorEmail>
+	<creatorEmail>salvi@apretaste.com</creatorEmail>
 	<serviceCategory>informativo</serviceCategory>
 	<serviceUsage>
 	<![CDATA[

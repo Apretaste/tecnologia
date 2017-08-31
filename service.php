@@ -13,6 +13,7 @@ class tecnologia extends Service
 		}
 
 		$response = new Response();
+		$response->setCache("day");
 		$response->setResponseSubject("Noticias de tecnología");
 		$response->createFromTemplate("basic.tpl", $allStories);
 		return $response;
@@ -54,6 +55,7 @@ class tecnologia extends Service
 
 		// send the response
 		$response = new Response();
+		$response->setCache();
 		$response->setResponseSubject($subject);
 		$response->createFromTemplate("historia.tpl", $responseContent);
 		return $response;
