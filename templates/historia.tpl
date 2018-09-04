@@ -1,11 +1,16 @@
+<style>
+p, li{
+  text-align: justify;
+}
+</style>
+<center>
 <h1>{$title}</h1>
 
-<div class="content">
+<div class="content" style="padding: 0 12px;">
   <p>{$description}</p>
   <font color="grey"><strong>Escrito {$author}.</strong></font>
 </div>
 {space15}
-<center>
 	{button href="tecnologia" caption="M&aacute;s noticias"}
-	{button href="pizarra Miren esto: {$url}" caption="Compartir" color="grey"}
+	{button href="pizarra compartir {$url} {$title}" caption="Compartir" color="grey"}
 </center>

@@ -1,24 +1,20 @@
 <table width="100%">
 	<tr>
 		<td><h1>Noticias de tecnologia de hoy</h1></td>
-		<td align="right" valign="top">
-			{button href="TECNOLOGIA BUSCAR" popup="true" size="small" desc="Inserte una palabra o frase a buscar" caption="&#10004; Buscar"}
-		</td>
 	</tr>
 </table>
-
+<center>
 {foreach from=$articles item=article name=arts}
-	<b>{link href="tecnologia historia {$article['link']}" caption="{$article['title']}"}</b><br/>
-	{space5}
-	{$article['description']|strip_tags|truncate:200:"..."}<br/>
+<div style="text-align:justify; width:95%;">
+<b>{link href="tecnologia historia {$article['link']}" caption="{$article['title']}" style='text-decoration:none;'}</b><br/>
+	{if $article['category']}
+	{$article['description']}<br/>
 	<small>
-		<font color="gray">{$article['author']} — {$article['pubDate']|date_format}</font>
-		<br/>
-		Categor&iacute;as:
-		{foreach from=$article['category'] item=category name=cats}
-			{link href="tecnologia categoria {$category}" caption="{$category}"}
-			{if not $smarty.foreach.cats.last}{separator}{/if}
-		{/foreach}
+	Categor&iacute;a:
+	{link href="tecnologia categoria {$article['category']}" caption="{$article['category']}"}
 	</small>
-	{space15}
+	{/if}
+	{space5}
+</div>
 {/foreach}
+</center>

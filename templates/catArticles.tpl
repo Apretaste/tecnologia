@@ -4,16 +4,19 @@
 	<p>Lo siento, a&uacute;n no tenemos historias para &eacute;sta categor&iacute;a :'-(</p>
 {/if}
 
-{foreach from=$articles item=article}
-	<b>{link href="tecnologia historia {$article['link']}" caption="{$article['title']}"}</b><br/>
-	{space5}
-	{$article['description']|strip_tags|truncate:200:"..."}</br>
+{foreach from=$articles item=article name=arts}
+<div style="text-align:justify; width:95%;">
+<b>{link href="tecnologia historia {$article['link']}" caption="{$article['title']}" style='text-decoration:none;'}</b><br/>
+	{if $article['category']}
+	{$article['description']}<br/>
 	<small>
-		<font color="gray">{$article['author']} — {$article['pubDate']|date_format}</font>
+	Categor&iacute;a:
+	{link href="tecnologia categoria {$article['categoryLink']}" caption="{$article['category']}"}
 	</small>
-	{space15}
+	{/if}
+	{space5}
+</div>
 {/foreach}
-{space5}
 <center>
 	{button href="tecnologia" caption="M&aacute;s noticias"}
 </center>

@@ -13,17 +13,15 @@ class tecnologia extends Service
 		}
 
 		$response = new Response();
-		$response->setCache("day");
+		$response->setCache(720);
 		$response->setResponseSubject("Noticias de tecnología");
 		$response->createFromTemplate("basic.tpl", $allStories);
 		return $response;
 	}
 
 	/**
-	 * Subservice _historia to call the view of
-	 * a single post()
+	 * Subservice _historia to call the view of a single post
 	 *
-	 * @see tecnologia::post()
 	 * @param Request
 	 * @return Response
 	 */
@@ -39,72 +37,27 @@ class tecnologia extends Service
 			return $response;
 		}
 
-		// explode the query string every '/'
-		$pieces = explode("/", $request->query);
+		$page = stripos($request->query,"hipertextual")?1:(stripos($request->query,"xataka")?2:false);
+
+		if(!$page){
+			$response = new Response();
+			$response->setResponseSubject("Busqueda invalida");
+			$response->createFromText("Esta intentando buscar un articulo que no es parte de las publicaciones listadas en el servicio");
+			return $response;
+		}
 
 		// call to parse the post
 		try{
-			$responseContent = $this->post($request->query);
+			$responseContent = $this->post($request->query, $page);
 		} catch(Exception $e) {
 			return $this->respondWithError();
 		}
-
-		// subject changes when user comes from the main menu or from buscar
-		if(strlen($pieces[1]) > 5) $subject = str_replace("-", " ", ucfirst($pieces[1]));
-		else $subject = "La historia que pidió";
 
 		// send the response
 		$response = new Response();
 		$response->setCache();
-		$response->setResponseSubject($subject);
+		$response->setResponseSubject($responseContent['title']);
 		$response->createFromTemplate("historia.tpl", $responseContent);
-		return $response;
-	}
-
-	/**
-	 * Subservice to search articles
-	 *
-	 * @see tecnologia::search()
-	 * @param Request
-	 * @return Response
-	 */
-
-	public function _buscar(Request $request)
-	{
-		// don't allow empty entries
-		if (empty($request->query))
-		{
-			$response = new Response();
-			$response->setResponseSubject("Búsqueda en blanco");
-			$response->createFromText("Su búsqueda parece estar en blanco, debe decirnos sobre qué tema desea leer");
-			return $response;
-		}
-
-		// search by the query
-		try{
-			$articles = $this->search($request->query);
-		} catch(Exception $e) {
-			return $this->respondWithError();
-		}
-
-		// if the search is empty
-		if(empty($articles))
-		{
-			$failed[] = array();
-			$response = new Response();
-			$response->setResponseSubject("Su búsqueda no generó resultados");
-			$response->createFromTemplate("noArticles.tpl", $failed);
-			return $response;
-		}
-
-		$responseContent = array(
-			"articles" => $articles,
-			"search" => $request->query
-		);
-
-		$response = new Response();
-		$response->setResponseSubject("Buscar: " . $request->query);
-		$response->createFromTemplate("searchArticles.tpl", $responseContent);
 		return $response;
 	}
 
@@ -144,130 +97,39 @@ class tecnologia extends Service
 	}
 
 	/**
-	 * Get all stories from Conectica.com, a
-	 * tech blog from Latin America.
-	 *
-	 * @link http://conectica.com/
+	 * Get all stories from https://www.infotechnology.com/ and https://hipertextual.com/
 	 * @return Array
 	 */
-	private function allStories()
-	{
-		// create a new Client
-		$client = new Client();
-		$guzzle = $client->getClient();
-		$client->setClient($guzzle);
+	private function allStories(){
+		// load from cache if exists
+		$cacheFile = $this->utils->getTempDir() . date("Ymd") . "_tecnologia.tmp";
 
-		// create a crawler
-		$crawler = $client->request('GET', "http://feeds.feedburner.com/feedconectica?format=xml");
+		if (file_exists($cacheFile) && (time()-filemtime($cacheFile))<12*60*60) {
+			$articles = json_decode(file_get_contents($cacheFile),true);
+		}else{
+			$client = new Client();
+			$crawler = $client->request('GET', "https://hipertextual.com/");
 
-		$nodeCount = 0;
-		$articles = array();
-		$crawler->filter('item')->each(function($item, $i) use (&$articles, &$nodeCount)
-		{
-			// we only want the first 15 nodes
-			while ($nodeCount < 15)
-			{
-				// count a post
-				$nodeCount++;
+			$crawler->filter('div.wrapperDestacados > div.destacado, div.destacados--sidebar > div.destacado--sidebar')->each(function($item) use(&$articles){
+				$articles[]=['title' => $item->filter('a')->attr('title'),
+							 'link' => $item->filter('a')->attr('href'),
+							 'category' => false, 'categoryLink' => false, 'description' => false];
+			});
 
-				// the link to the article
-				$link = $this->urlSplit($item->filter('feedburner|origLink')->text());
+			$crawler = $client->request('GET', "https://www.xataka.com/");
 
-				// show only the content part of the link
-				$pieces = explode("/", $link);
-
-				// get title, description, pubDate, and category
-				$title = $item->filter('title')->text();
-
-				// get the text of the description
-				$text = $item->filter('content|encoded')->text();
-				// strip all images and videos from the description string
-				$description = strip_tags($text, '<p>');
-
-				// get the publication date
-				$pubDate = $item->filter('pubDate')->text();
-
-				// get category
-				$category = $item->filter('category')->each(
-				function ($category, $j) {
-				return $category->text();
-				});
-
-				// get the author
-				$authorSel = 'dc|creator';
-				if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
-				else
-				{
-				$author = $item->filter($authorSel)->text();
-				}
-
-				// traverse and show all the categories of the <item>
-				$categoryLink = array();
-				foreach($category as $currCategory)
-				{
-				$categoryLink[] = $currCategory;
-				}
-
-				// finally set everything
-				$articles[] = array(
-					"title" => $title,
-					"link" => $link,
-					"pubDate" => $pubDate,
-					"description" => $description,
-					"category" => $category,
-					"categoryLink" => $categoryLink,
-					"author" => $author
-				);
-				return;
-			}
-		});
-
+			$crawler->filter('section:nth-child(2) div.section-recent-list div.abstract-content')->each(function($item) use(&$articles){
+				$articles[]=['title' => $item->filter('header > h2.abstract-title')->text(),
+							 'link' => $item->filter('h2.abstract-title > a')->attr('href'),
+							 'category' => $item->filter('a.abstract-taxonomy')->text(),
+							 'categoryLink' => "https://www.xataka.com".$item->filter('header > a')->attr('href'),
+							 'description' => $item->filter('div.abstract-excerpt > p')->text()];
+			});
+			shuffle($articles);
+			// save cache file for today
+			file_put_contents($cacheFile, json_encode($articles));
+		}
 		return array("articles" => $articles);
-	}
-
-	/**
-	 * Search articles matching the $query
-	 *
-	 * @param String
-	 * @return Array
-	 */
-
-	private function search($query)
-	{
-		// create a new Client
-		$client = new Client();
-		$url = "http://www.conectica.com/?s=".urlencode($query);
-		$crawler = $client->request('GET', $url);
-
-		// collect the posts that match with the search
-		$articles = array();
-		$crawler->filter('.grid_post')->each(function ($item, $i) use (&$articles)
-		{
-			// get data from the posts
-			$date = $item->filter('.authorDate')->text();
-			$date = strip_tags($date, '<a>');
-
-			// get title of the post
-			$title = $item->filter('.grid_post_title a')->text();
-
-			// get the author
-			$author = $item->filter('.authorDate a')->text();
-
-			// the URL
-			$preLink = $item->filter('.grid_post_title a')->attr('href');
-
-			// the actual service-friendly link
-			$link = $this->urlSplit($preLink);
-
-			// store the article
-			$articles[] = array(
-				"pubDate" => $date,
-				"title" => $title,
-				"author" => $author,
-				"link" => $link
-			);
-		});
-		return $articles;
 	}
 
 	/**
@@ -276,54 +138,23 @@ class tecnologia extends Service
 	 * @param String
 	 * @return Array
 	 */
-	private function listByCategory($query)
+	private function listByCategory(String $category)
 	{
-		// setup new Client
+		$tildes = ['Á','É','Í','Ó','Ú','á','é','í','ó','ú'];
+		$replace = ['A','E','I','O','U','a','e','i','o','u'];
+		$category = str_replace($tildes, $replace, $category);
 		$client = new Client();
-		$crawler = $client->request('GET', "http://feeds.feedburner.com/feedconectica?format=xml");
-
-		// filter every item
 		$articles = array();
-		$crawler->filter('channel item')->each(function ($item, $i) use (&$articles, $query)
-		{
-			// filter by category, and add it to the list of articles to show
-			$item->filter('category')->each(function ($cat, $i) use (&$articles, &$query, &$item)
-			{
-				if($cat->text() == $query)
-				{
-					// get the title
-					$title = $item->filter('title')->text();
-
-					// get the the link, then urlSplit()-it
-					$link = $this->urlSplit($item->filter('feedburner|origLink')->text());
-
-					// get the publication date
-					$pubDate = $item->filter('pubDate')->text();
-
-					// get the description of the item
-					$text = $item->filter('content|encoded')->text();
-					$description = strip_tags($text, '<p>');
-
-					// get the author, else unknow
-					$authorSel = 'dc|creator';
-					if ($item->filter($authorSel)->count() == 0) $author = "Desconocido";
-					else
-					{
-						$author = $item->filter($authorSel)->text();
-					}
-
-					$articles[] = array(
-						"title" => $title,
-						"link" => $link,
-						"pubDate" => $pubDate,
-						"description" => $description,
-						"author" => $author
-					);
-				}
-			});
+		$crawler = $client->request('GET', "https://www.xataka.com/categoria/".$category);
+		$crawler->filter('div.section-recent-list div.abstract-content')->each(function($item) use(&$articles){
+			$articles[]=['title' => $item->filter('header > h2.abstract-title')->text(),
+						 'link' => $item->filter('h2.abstract-title > a')->attr('href'),
+						 'category' => $item->filter('a.abstract-taxonomy')->text(),
+						 'categoryLink' => "https://www.xataka.com".$item->filter('header > a')->attr('href'),
+						 'description' => $item->filter('div.abstract-excerpt > p')->text()];
 		});
+		shuffle($articles);
 
-		// Return Response array
 		return array("articles" => $articles);
 	}
 
@@ -334,54 +165,60 @@ class tecnologia extends Service
 	 * @return Array
 	 */
 
-	private function post($query)
+	private function post(String $url, $page)
 	{
-		// create a new Client
+		// create a new Client and the crawler
 		$client = new Client();
-		$guzzle = $client->getClient();
-		$guzzle->setDefaultOption('verify', true);
-		$client->setClient($guzzle);
+		$crawler = $client->request('GET', $url);
 
-		// the crawler
-		$crawler = $client->request('GET', "http://www.conectica.com/$query");
+		switch ($page) {
+			case 1:
+				// the title
+				$title = $crawler->filter('h1.headlineSingle__title')->text();
 
-		// the title
-		$title = $crawler->filter('.singleHeader h1')->text();
+				// the text
+				$crawler->filter('div.historia > p, div.historia > blockquote, div.historia > ul')->each(function($item) use (&$text){
+					$text .= $item->html()."<br>";
+				});
 
-		// the text
-		$text = $crawler->filter('.postContent')->html();
+				$description = strip_tags($text, '<strong><br><h1><h2><h3><h4><ul><li>');
 
-		// get the description of the item
-		$text = preg_replace('@<(h3|a)[^>]*class\s*=[^>]*>.*?</\1>@is', "", $text);
-		$description = strip_tags($text, '<p><strong><h1><h2><h3><h4>');
+				// the author's info
+				$author = $crawler->filter('a.author__name')->text();
 
-		// the author's info
-		$author = $crawler->filter('address > a')->text();
+				return array(
+					'title' => $title,
+					'author' => $author,
+					'description' => $description,
+					'url' => $url
+				);
+				break;
+			case 2:
+				// the title
+				$title = $crawler->filter('header > h1')->text();
+				
+				// the text
+				$crawler->filter('div.article-content p:not(:last-child)')->each(function($item) use (&$text){
+					$text .= $item->html()."<br><br>";
+				});
+				
+				$description = strip_tags($text, '<strong><br><h1><h2><h3><h4><ul><li>');
 
-		return array(
-			'title' => $title,
-			'author' => $author,
-			'description' => $description,
-			'url' => "http://conectica.com/$query"
-		);
-	}
+				// the author's info
+				$author = $crawler->filter('a.article-author-link')->text();
 
-	/**
-	 * Get the link to the news starting from the /content part
-	 *
-	 * @param String
-	 * @return String
-	 */
-
-	private function urlSplit($url)
-	{
-		$url = explode("/", trim($url));
-		for ($i=0; $i < 3; $i++) {
-		unset($url[$i]);
+				return array(
+					'title' => $title,
+					'author' => $author,
+					'description' => $description,
+					'url' => $url
+				);
+				break;
+			default:
+				# code...
+				break;
 		}
-		return implode("/", $url);
 	}
-
 	/**
 	 * Return a generic error email, usually for try...catch blocks
 	 *
@@ -391,8 +228,7 @@ class tecnologia extends Service
 	private function respondWithError()
 	{
 		error_log("WARNING: ERROR ON SERVICE TECNOLOGIA");
-
-		$response = new Response();
+ 		$response = new Response();
 		$response->setResponseSubject("Error en peticion");
 		$response->createFromText("Lo siento pero hemos tenido un error inesperado. Enviamos una peticion para corregirlo. Por favor intente nuevamente mas tarde.");
 		return $response;
