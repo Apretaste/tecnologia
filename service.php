@@ -1,237 +1,199 @@
 <?php
 
-use Goutte\Client;
+use Apretaste\Level;
+use Apretaste\Request;
+use Apretaste\Response;
+use Framework\Alert;
+use Framework\Crawler;
+use Framework\Database;
 
-class tecnologia extends Service
+class Service
 {
-	public function _main(Request $request)
+	// TODO add https://es.digitaltrends.com/fuentes-rss/
+
+	/**
+	 * Get the list of news
+	 *
+	 * @param Request $request
+	 * @param Response $response
+	 * @throws Alert
+	 * @author ricardo
+	 */
+	public function _main(Request $request, Response &$response)
 	{
-		try{
-			$allStories = $this->allStories();
-		} catch(Exception $e) {
-			return $this->respondWithError();
+		$selectedSource = $request->input->data->source ?? false;
+		$categoryWhere = $selectedSource ? "WHERE A.source_id = $selectedSource" : "";
+		$articles = Database::query("SELECT A.id, A.title, A.pubDate, A.author, A.image, A.imageLink, A.description, A.comments, B.name AS category FROM _tecnologia_articles A LEFT JOIN _tecnologia_sources B ON A.source_id = B.id $categoryWhere ORDER BY pubDate DESC LIMIT 20");
+
+		$inCuba = $request->input->inCuba ?? false;
+		$serviceImgPath = SERVICE_PATH . "tecnologia/images";
+		$images = ["$serviceImgPath/no-image.png"];
+		$techImgDir = SHARED_PUBLIC_PATH . 'content/tecnologia';
+
+		foreach ($articles as $article) {
+			$article->title = quoted_printable_decode($article->title);
+			$article->pubDate = self::toEspMonth(date('j F, Y', strtotime($article->pubDate)));
+			$article->description = quoted_printable_decode($article->description);
+
+			if (!$inCuba) {
+				$imgPath = "$techImgDir/{$article->category}/{$article->image}";
+
+				if (!file_exists($imgPath)) {
+					$image = Crawler::get($article->imageLink, 'GET', null, [], [], $info);
+
+					if ($info['http_code'] ?? 404 === 200)
+						if (!empty($image))
+							file_put_contents($imgPath, $image);
+				} else {
+					$image = file_get_contents($imgPath);
+				}
+
+				if (!empty($image)) $images[] = $imgPath;
+			} else {
+				$article->image = "no-image.png";
+			}
 		}
 
-		$response = new Response();
-		$response->setCache(720);
-		$response->setResponseSubject("Noticias de tecnología");
-		$response->createFromTemplate("basic.tpl", $allStories);
-		return $response;
+		$content = ["articles" => $articles, "selectedSource" => $selectedSource];
+
+		// send data to the view
+		$response->setCache(60);
+		$response->setLayout('tecnologia.ejs');
+		$response->setTemplate("stories.ejs", $content, $images);
+	}
+
+	private static function toEspMonth(string $date)
+	{
+		$months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+		$espMonths = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+		return str_replace($months, $espMonths, $date);
 	}
 
 	/**
-	 * Subservice _historia to call the view of a single post
+	 * Call to show the news
 	 *
 	 * @param Request
+	 * @param Response
 	 * @return Response
+	 * @throws Exception
 	 */
-
-	public function _historia(Request $request)
+	public function _historia(Request $request, Response $response)
 	{
-		// entries must have content
-		if (empty($request->query))
-		{
-			$response = new Response();
-			$response->setResponseSubject("Búsqueda en blanco");
-			$response->createFromText("Su búsqueda parece estar en blanco, debe decirnos qué artículo desea leer");
-			return $response;
+		// get link to the article
+		$id = $request->input->data->id ?? false;
+
+		if ($id) {
+			$article = Database::query("SELECT * FROM _tecnologia_articles WHERE id='$id'")[0];
+
+			$article->title = quoted_printable_decode($article->title);
+			$article->pubDate = self::toEspMonth((date('j F, Y', strtotime($article->pubDate))));
+			$article->description = quoted_printable_decode($article->description);
+			$article->content = quoted_printable_decode($article->content);
+			$article->imageCaption = quoted_printable_decode($article->imageCaption);
+			$article->comments = Database::query("SELECT A.*, B.username FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id WHERE A.id_article='{$article->id}' ORDER BY A.id DESC");
+			$article->myUsername = $request->person->username;
+
+			// any global var in js named location changes the location of the url
+			$article->artLocation = $article->location;
+			unset($article->location);
+
+			foreach ($article->comments as $comment) {
+				$comment->inserted = date('d/m/Y · h:i a', strtotime($comment->inserted));
+			}
+
+			$images = [];
+
+			// get the image if exist
+			$techImgDir = SHARED_PUBLIC_PATH . 'content/tecnologia';
+			if (!empty($article->image)) $images[] = "$techImgDir/{$article->image}";
+
+			// send info to the view
+			$response->setCache('30');
+			$response->setLayout('tecnologia.ejs');
+			$response->setTemplate('stories.ejs', $article, $images);
+		} else {
+			return $this->error($response, "Articulo no encontrado", "No sabemos que articulo estas buscando");
 		}
-
-		$page = stripos($request->query,"hipertextual")?1:(stripos($request->query,"xataka")?2:false);
-
-		if(!$page){
-			$response = new Response();
-			$response->setResponseSubject("Busqueda invalida");
-			$response->createFromText("Esta intentando buscar un articulo que no es parte de las publicaciones listadas en el servicio");
-			return $response;
-		}
-
-		// call to parse the post
-		try{
-			$responseContent = $this->post($request->query, $page);
-		} catch(Exception $e) {
-			return $this->respondWithError();
-		}
-
-		// send the response
-		$response = new Response();
-		$response->setCache();
-		$response->setResponseSubject($responseContent['title']);
-		$response->createFromTemplate("historia.tpl", $responseContent);
-		return $response;
 	}
 
 	/**
-	 * Subservice to get a list of articles by category
+	 * Return an error message
 	 *
-	 * @see tecnologia::listByCategory()
-	 * @param Request
+	 * @param Response $response
+	 * @param String $title
+	 * @param String $desc
 	 * @return Response
+	 * @throws Alert
+	 * @author ricardo
 	 */
-	public function _categoria(Request $request)
+	private function error(Response $response, $title, $desc)
 	{
-		if (empty($request->query))
-		{
-			$response = new Response();
-			$response->setResponseSubject("Categoría en blanco");
-			$response->createFromText("Su búsqueda parece estar en blanco, debe decirnos sobre qué categoría desea leer");
-			return $response;
-		}
+		// display show error in the log
+		error_log("[TECNOLOGIA] $title | $desc");
 
-		// search by the query
-		try{
-			$articles = $this->listByCategory($request->query);
-		} catch(Exception $e) {
-			return $this->respondWithError();
-		}
-
-		$responseContent = array(
-			"articles" => $articles["articles"],
-			"category" => $request->query
-		);
-
-		$response = new Response();
-		$response->setResponseSubject("Categor&iacute;a: " . $request->query);
-		$response->createFromTemplate("catArticles.tpl", $responseContent);
-		return $response;
+		// return error template
+		$response->setLayout('tecnologia.ejs');
+		return $response->setTemplate('message.ejs', ["header" => $title, "text" => $desc]);
 	}
 
 	/**
-	 * Get all stories from https://www.infotechnology.com/ and https://hipertextual.com/
-	 * @return Array
-	 */
-	private function allStories(){
-		// load from cache if exists
-		$cacheFile = $this->utils->getTempDir() . date("Ymd") . "_tecnologia.tmp";
-
-		if (file_exists($cacheFile) && (time()-filemtime($cacheFile))<12*60*60) {
-			$articles = json_decode(file_get_contents($cacheFile),true);
-		}else{
-			$client = new Client();
-			$crawler = $client->request('GET', "https://hipertextual.com/");
-
-			$crawler->filter('div.wrapperDestacados > div.destacado, div.destacados--sidebar > div.destacado--sidebar')->each(function($item) use(&$articles){
-				$articles[]=['title' => $item->filter('a')->attr('title'),
-							 'link' => $item->filter('a')->attr('href'),
-							 'category' => false, 'categoryLink' => false, 'description' => false];
-			});
-
-			$crawler = $client->request('GET', "https://www.xataka.com/");
-
-			$crawler->filter('section:nth-child(2) div.section-recent-list div.abstract-content')->each(function($item) use(&$articles){
-				$articles[]=['title' => $item->filter('header > h2.abstract-title')->text(),
-							 'link' => $item->filter('h2.abstract-title > a')->attr('href'),
-							 'category' => $item->filter('a.abstract-taxonomy')->text(),
-							 'categoryLink' => "https://www.xataka.com".$item->filter('header > a')->attr('href'),
-							 'description' => $item->filter('div.abstract-excerpt > p')->text()];
-			});
-			shuffle($articles);
-			// save cache file for today
-			file_put_contents($cacheFile, json_encode($articles));
-		}
-		return array("articles" => $articles);
-	}
-
-	/**
-	 * Collect the array of news by category
+	 * Watch the last comments in articles or with no article
 	 *
-	 * @param String
-	 * @return Array
-	 */
-	private function listByCategory(String $category)
-	{
-		$tildes = ['Á','É','Í','Ó','Ú','á','é','í','ó','ú'];
-		$replace = ['A','E','I','O','U','a','e','i','o','u'];
-		$category = str_replace($tildes, $replace, $category);
-		$client = new Client();
-		$articles = array();
-		$crawler = $client->request('GET', "https://www.xataka.com/categoria/".$category);
-		$crawler->filter('div.section-recent-list div.abstract-content')->each(function($item) use(&$articles){
-			$articles[]=['title' => $item->filter('header > h2.abstract-title')->text(),
-						 'link' => $item->filter('h2.abstract-title > a')->attr('href'),
-						 'category' => $item->filter('a.abstract-taxonomy')->text(),
-						 'categoryLink' => "https://www.xataka.com".$item->filter('header > a')->attr('href'),
-						 'description' => $item->filter('div.abstract-excerpt > p')->text()];
-		});
-		shuffle($articles);
-
-		return array("articles" => $articles);
-	}
-
-	/**
-	 * Parse individual posts
-	 *
-	 * @param String
-	 * @return Array
+	 * @param Request $request
+	 * @param Response $response
+	 * @throws Alert
 	 */
 
-	private function post(String $url, $page)
+	public function _comentarios(Request $request, Response $response)
 	{
-		// create a new Client and the crawler
-		$client = new Client();
-		$crawler = $client->request('GET', $url);
+		$comments = Database::query("SELECT A.*, B.username, C.title, C.pubDate, C.author FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id LEFT JOIN _tecnologia_articles C ON C.id = A.id_article ORDER BY A.id DESC LIMIT 20");
 
-		switch ($page) {
-			case 1:
-				// the title
-				$title = $crawler->filter('h1.headlineSingle__title')->text();
-
-				// the text
-				$crawler->filter('div.historia > p, div.historia > blockquote, div.historia > ul')->each(function($item) use (&$text){
-					$text .= $item->html()."<br>";
-				});
-
-				$description = strip_tags($text, '<strong><br><h1><h2><h3><h4><ul><li>');
-
-				// the author's info
-				$author = $crawler->filter('a.author__name')->text();
-
-				return array(
-					'title' => $title,
-					'author' => $author,
-					'description' => $description,
-					'url' => $url
-				);
-				break;
-			case 2:
-				// the title
-				$title = $crawler->filter('header > h1')->text();
-				
-				// the text
-				$crawler->filter('div.article-content p:not(:last-child)')->each(function($item) use (&$text){
-					$text .= $item->html()."<br><br>";
-				});
-				
-				$description = strip_tags($text, '<strong><br><h1><h2><h3><h4><ul><li>');
-
-				// the author's info
-				$author = $crawler->filter('a.article-author-link')->text();
-
-				return array(
-					'title' => $title,
-					'author' => $author,
-					'description' => $description,
-					'url' => $url
-				);
-				break;
-			default:
-				# code...
-				break;
+		foreach ($comments as $comment) {
+			$comment->inserted = date('d/m/Y · h:i a', strtotime($comment->inserted));
+			$comment->pubDate = self::toEspMonth(date('j F, Y', strtotime($comment->pubDate)));
 		}
+		// send info to the view
+		$response->setLayout('tecnologia.ejs');
+		$response->setTemplate("comments.ejs", ["comments" => $comments, "myUsername" => $request->person->username]);
 	}
+
 	/**
-	 * Return a generic error email, usually for try...catch blocks
+	 * Comment an article
 	 *
-	 * @auhor salvipascual
-	 * @return Respose
+	 * @param Request $request
+	 * @param Response $response
+	 *
+	 * @throws Exception
+	 * @author ricardo
+	 *
 	 */
-	private function respondWithError()
+	public function _comentar(Request $request, Response $response)
 	{
-		error_log("WARNING: ERROR ON SERVICE TECNOLOGIA");
- 		$response = new Response();
-		$response->setResponseSubject("Error en peticion");
-		$response->createFromText("Lo siento pero hemos tenido un error inesperado. Enviamos una peticion para corregirlo. Por favor intente nuevamente mas tarde.");
-		return $response;
+		// do not allow guest comments
+		if ($request->person->isGuest) {
+			return;
+		}
+
+		// get comment data
+		$comment = $request->input->data->comment;
+		$articleId = $request->input->data->article ?? false;
+
+		if ($articleId) {
+			// check the note ID is valid
+			$article = Database::query("SELECT COUNT(*) AS total FROM _tecnologia_articles WHERE id='$articleId'");
+			if ($article[0]->total == "0") return;
+
+			// save the comment
+			$comment = Database::escape($comment, 255);
+			Database::query("
+				INSERT INTO _tecnologia_comments (id_person, id_article, content) VALUES ('{$request->person->id}', '$articleId', '$comment');
+				UPDATE _tecnologia_articles SET comments = comments+1 WHERE id='$articleId';");
+
+			// add the experience
+			Level::setExperience('NEWS_COMMENT_FIRST_DAILY', $request->person->id);
+		} else {
+			Database::query("INSERT INTO _tecnologia_comments (id_person, content) VALUES ('{$request->person->id}', '$comment')");
+		}
 	}
 }
-?>

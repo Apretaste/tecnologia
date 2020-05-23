@@ -1,0 +1,9 @@
+{
+  "name": "tecnologia",
+  "caption": "Tecnología",
+  "description": "Noticias de tecnología actuales",
+  "category": "informativo",
+  "creator": "ricardo@apretaste.org",
+  "listed": true,
+  "guest": true
+}
