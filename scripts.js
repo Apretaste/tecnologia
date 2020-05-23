@@ -87,7 +87,7 @@ function sendComment() {
 function sendCommentCallback(comment) {
 	var element = "<li class=\"collection-item avatar\" id=\"last\">" +
 		"<div class=\"person-avatar circle\" face=\"" + avatar + "\" color=\"" + avatarColor + "\" size=\"42\" onclick=\"openProfile('" + username + "')\"></div>" +
-		"<span class=\"title\" style=\"color: #303d44; font-weight: 500\">@" + username + " &middot; <small class=\"grey-ddc\"><b>" + Date.prototype.nowFormated() + "</b></small></span>" +
+		"<span class=\"title\" style=\"color: #303d44; font-weight: 500\" onclick=\"openProfile('" + username + "')\">@" + username + " &middot; <small class=\"grey-ddc\"><b>" + Date.prototype.nowFormated() + "</b></small></span>" +
 		"<p>" + comment + "</p>" +
 		"</li>";
 
