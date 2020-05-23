@@ -102,8 +102,9 @@ class Service
 			$images = [];
 
 			// get the image if exist
+			$source = str_replace(' ', '_', $article->source);
 			$techImgDir = SHARED_PUBLIC_PATH . 'content/tecnologia';
-			if (!empty($article->image)) $images[] = "$techImgDir/{$article->source}/{$article->image}";
+			if (!empty($article->image)) $images[] = "$techImgDir/{$source}/{$article->image}";
 
 			// send info to the view
 			$response->setCache('30');
