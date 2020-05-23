@@ -47,8 +47,10 @@
         <li class="collection-item avatar">
             <div class="person-avatar circle"
                  face="<%= comment.avatar %>" color="<%= comment.avatarColor %>"
-                 size="42"></div>
-            <span class="title" style="color: #263238; font-weight: 500">@<%= comment.username %> &middot; <small
+                 size="42"
+                 onclick="openProfile('<%= comment.username %>')"></div>
+            <span class="title" style="color: #263238; font-weight: 500"
+                  onclick="openProfile('<%= comment.username %>')">@<%= comment.username %> &middot; <small
                         class="grey-ddc"><span style="color: #424242"><%= comment.inserted %></span></small></span>
             <p><%= comment.content %></p>
         </li>
