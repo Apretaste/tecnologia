@@ -104,6 +104,9 @@ class Service
 
 			$article->isGuest = $request->person->isGuest;
 			$article->barTitle = "Noticias";
+			$article->username = $request->person->username;
+			$article->avatar = $request->person->avatar;
+			$article->avatarColor = $request->person->avatarColor;
 
 			$images = [];
 
@@ -163,7 +166,10 @@ class Service
 		$content = [
 			"comments" => $comments,
 			"isGuest" => $request->person->isGuest,
-			'barTitle' => "Comentarios"
+			'barTitle' => "Comentarios",
+			'username' => $request->person->username,
+			'avatar' => $request->person->avatar,
+			'avatarColor' => $request->person->avatarColor
 		];
 
 		// send info to the view

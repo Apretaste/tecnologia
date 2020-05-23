@@ -77,10 +77,10 @@ function sendComment() {
 
 function sendCommentCallback(comment) {
 	var element = "<li class=\"collection-item avatar\" id=\"last\">" +
-		"<span style=\"background-color: " + getRandomColor() + "\" class=\"circle\">" + myUsername[0].toUpperCase() + "</span>" +
-		"<span class=\"title\" style=\"color: #303d44; font-weight: 500\">@" + myUsername + " &middot; <small class=\"grey-ddc\"><b>" + Date.prototype.nowFormated() + "</b></small></span>" +
-		"<p>" + comment + "</p>" +
-		"</li>";
+		"<div class=\"person-avatar circle\" face=\"" + avatar + "\" color=\"" + avatarColor + "\" size=\"42\"></div>"
+	"<span class=\"title\" style=\"color: #303d44; font-weight: 500\">@" + username + " &middot; <small class=\"grey-ddc\"><b>" + Date.prototype.nowFormated() + "</b></small></span>" +
+	"<p>" + comment + "</p>" +
+	"</li>";
 
 	$('#no-comments').remove();
 
