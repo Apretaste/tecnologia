@@ -22,8 +22,8 @@ class Service
 	public function _main(Request $request, Response &$response)
 	{
 		$selectedSource = $request->input->data->source ?? false;
-		$categoryWhere = $selectedSource ? "WHERE A.source_id = $selectedSource" : "";
-		$articles = Database::query("SELECT A.id, A.title, A.pubDate, A.author, A.image, A.imageLink, A.description, A.comments, B.name AS category FROM _tecnologia_articles A LEFT JOIN _tecnologia_sources B ON A.source_id = B.id $categoryWhere ORDER BY pubDate DESC LIMIT 20");
+		$sourceWhere = $selectedSource ? "WHERE A.source_id = $selectedSource" : "";
+		$articles = Database::query("SELECT A.id, A.title, A.pubDate, A.author, A.image, A.imageLink, A.description, A.comments, B.name AS source FROM _tecnologia_articles A LEFT JOIN _tecnologia_sources B ON A.source_id = B.id $sourceWhere ORDER BY pubDate DESC LIMIT 20");
 
 		$inCuba = $request->input->inCuba ?? false;
 		$serviceImgPath = SERVICE_PATH . "tecnologia/images";
@@ -36,7 +36,8 @@ class Service
 			$article->description = quoted_printable_decode($article->description);
 
 			if (!$inCuba) {
-				$imgPath = "$techImgDir/{$article->category}/{$article->image}";
+				$source = str_replace(' ', '_', $article->source);
+				$imgPath = "$techImgDir/{$source}/{$article->image}";
 
 				if (!file_exists($imgPath)) {
 					$image = Crawler::get($article->imageLink, 'GET', null, [], [], $info);
@@ -73,10 +74,10 @@ class Service
 	/**
 	 * Call to show the news
 	 *
-	 * @param Request
-	 * @param Response
+	 * @param Request $request
+	 * @param Response $response
 	 * @return Response
-	 * @throws Exception
+	 * @throws Alert
 	 */
 	public function _historia(Request $request, Response $response)
 	{
@@ -84,7 +85,7 @@ class Service
 		$id = $request->input->data->id ?? false;
 
 		if ($id) {
-			$article = Database::query("SELECT * FROM _tecnologia_articles WHERE id='$id'")[0];
+			$article = Database::query("SELECT *, B.name AS source FROM _tecnologia_articles A LEFT JOIN _tecnologia_sources B ON A.source_id = B.id WHERE A.id='$id'")[0];
 
 			$article->title = quoted_printable_decode($article->title);
 			$article->pubDate = self::toEspMonth((date('j F, Y', strtotime($article->pubDate))));
@@ -94,10 +95,6 @@ class Service
 			$article->comments = Database::query("SELECT A.*, B.username FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id WHERE A.id_article='{$article->id}' ORDER BY A.id DESC");
 			$article->myUsername = $request->person->username;
 
-			// any global var in js named location changes the location of the url
-			$article->artLocation = $article->location;
-			unset($article->location);
-
 			foreach ($article->comments as $comment) {
 				$comment->inserted = date('d/m/Y · h:i a', strtotime($comment->inserted));
 			}
@@ -106,12 +103,12 @@ class Service
 
 			// get the image if exist
 			$techImgDir = SHARED_PUBLIC_PATH . 'content/tecnologia';
-			if (!empty($article->image)) $images[] = "$techImgDir/{$article->image}";
+			if (!empty($article->image)) $images[] = "$techImgDir/{$article->source}/{$article->image}";
 
 			// send info to the view
 			$response->setCache('30');
 			$response->setLayout('tecnologia.ejs');
-			$response->setTemplate('stories.ejs', $article, $images);
+			$response->setTemplate('story.ejs', $article, $images);
 		} else {
 			return $this->error($response, "Articulo no encontrado", "No sabemos que articulo estas buscando");
 		}
@@ -152,6 +149,7 @@ class Service
 		foreach ($comments as $comment) {
 			$comment->inserted = date('d/m/Y · h:i a', strtotime($comment->inserted));
 			$comment->pubDate = self::toEspMonth(date('j F, Y', strtotime($comment->pubDate)));
+			$comment->title = quoted_printable_decode($comment->title);
 		}
 		// send info to the view
 		$response->setLayout('tecnologia.ejs');

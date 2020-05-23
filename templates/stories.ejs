@@ -28,12 +28,7 @@
                     </small><br>
                     <small style="color: #7b7b7b"><%= article.description %></small><br>
                     <span style="display: block; margin-top: 5px">
-                        <% article.tags.forEach(function (tag) { %>
-                            <% if(tag.length < 10){ %>
-                                <div class="chip small"><%= tag %></div>
-                                <!-- onclick="apretaste.send({'command':'TECNOLOGIA TAG', 'data': {'tag': '<%= tag %>'}})" -->
-                            <% } %>
-                        <% }) %>
+                        <div class="chip small"><%= article.source %></div>
                     </span>
                 </div>
             </div>

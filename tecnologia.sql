@@ -6,7 +6,6 @@ CREATE TABLE `_tecnologia_articles` (
   `author` varchar(40),
   `description` text,
   `source_id` tinyint(4) NOT NULL,
-  `intro` text,
   `image` varchar(40),
   `imageLink` varchar(255),
   `imageCaption` varchar(255),
