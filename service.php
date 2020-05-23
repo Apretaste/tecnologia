@@ -55,7 +55,10 @@ class Service
 			}
 		}
 
-		$content = ["articles" => $articles, "selectedSource" => $selectedSource];
+		$content = [
+			"articles" => $articles, "selectedSource" => $selectedSource,
+			'isGuest' => $request->person->isGuest, 'barTitle' => "Noticias"
+		];
 
 		// send data to the view
 		$response->setCache(60);
@@ -85,19 +88,21 @@ class Service
 		$id = $request->input->data->id ?? false;
 
 		if ($id) {
-			$article = Database::query("SELECT *, B.name AS source FROM _tecnologia_articles A LEFT JOIN _tecnologia_sources B ON A.source_id = B.id WHERE A.id='$id'")[0];
+			$article = Database::query("SELECT A.*, B.name AS source FROM _tecnologia_articles A LEFT JOIN _tecnologia_sources B ON A.source_id = B.id WHERE A.id='$id'")[0];
 
 			$article->title = quoted_printable_decode($article->title);
 			$article->pubDate = self::toEspMonth((date('j F, Y', strtotime($article->pubDate))));
 			$article->description = quoted_printable_decode($article->description);
 			$article->content = quoted_printable_decode($article->content);
 			$article->imageCaption = quoted_printable_decode($article->imageCaption);
-			$article->comments = Database::query("SELECT A.*, B.username FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id WHERE A.id_article='{$article->id}' ORDER BY A.id DESC");
-			$article->myUsername = $request->person->username;
+			$article->comments = Database::query("SELECT A.*, B.username, B.avatar FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id WHERE A.id_article='{$article->id}' ORDER BY A.id DESC");
 
 			foreach ($article->comments as $comment) {
 				$comment->inserted = date('d/m/Y · h:i a', strtotime($comment->inserted));
 			}
+
+			$article->isGuest = $request->person->isGuest;
+			$article->barTitle = "Noticias";
 
 			$images = [];
 
@@ -132,7 +137,7 @@ class Service
 
 		// return error template
 		$response->setLayout('tecnologia.ejs');
-		return $response->setTemplate('message.ejs', ["header" => $title, "text" => $desc]);
+		return $response->setTemplate('message.ejs', ["header" => $title, "text" => $desc, 'barTitle' => "Lo sentimos"]);
 	}
 
 	/**
@@ -145,16 +150,23 @@ class Service
 
 	public function _comentarios(Request $request, Response $response)
 	{
-		$comments = Database::query("SELECT A.*, B.username, C.title, C.pubDate, C.author FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id LEFT JOIN _tecnologia_articles C ON C.id = A.id_article ORDER BY A.id DESC LIMIT 20");
+		$comments = Database::query("SELECT A.*, B.username, B.avatar, C.title, C.pubDate, C.author FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id LEFT JOIN _tecnologia_articles C ON C.id = A.id_article ORDER BY A.id DESC LIMIT 20");
 
 		foreach ($comments as $comment) {
 			$comment->inserted = date('d/m/Y · h:i a', strtotime($comment->inserted));
 			$comment->pubDate = self::toEspMonth(date('j F, Y', strtotime($comment->pubDate)));
 			$comment->title = quoted_printable_decode($comment->title);
 		}
+
+		$content = [
+			"comments" => $comments,
+			"isGuest" => $request->person->isGuest,
+			'barTitle' => "Comentarios"
+		];
+
 		// send info to the view
 		$response->setLayout('tecnologia.ejs');
-		$response->setTemplate("comments.ejs", ["comments" => $comments, "myUsername" => $request->person->username]);
+		$response->setTemplate("comments.ejs", $content);
 	}
 
 	/**

@@ -38,7 +38,7 @@
     </span>
 </div>
 
-<% if (myUsername == "guest"){ %>
+<% if (isGuest){ %>
     <div class="col s12 red-text" style="font-weight: 500">Inicie sesión para comentar</div>
 <% } %>
 
@@ -53,12 +53,12 @@
         </li>
     <% }) %>
 
-    <% if(comments.length == 0 && myUsername != "guest") { %>
+    <% if(comments.length == 0 && !isGuest) { %>
         <div class="col s12" id="no-comments">Sé el primero en comentar</div>
     <% } %>
 </ul>
 
-<% if(myUsername != "guest") { %>
+<% if(!isGuest) { %>
     <div id="writeModal" class="container" status="closed" style="display: none;">
         <div class="row">
             <i class="material-icons small" onclick="toggleWriteModal()">close</i>
