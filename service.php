@@ -95,10 +95,11 @@ class Service
 			$article->description = quoted_printable_decode($article->description);
 			$article->content = quoted_printable_decode($article->content);
 			$article->imageCaption = quoted_printable_decode($article->imageCaption);
-			$article->comments = Database::query("SELECT A.*, B.username, B.avatar FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id WHERE A.id_article='{$article->id}' ORDER BY A.id DESC");
+			$article->comments = Database::query("SELECT A.*, B.username, B.avatar, B.avatarColor, B.gender FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id WHERE A.id_article='{$article->id}' ORDER BY A.id DESC");
 
 			foreach ($article->comments as $comment) {
 				$comment->inserted = date('d/m/Y · h:i a', strtotime($comment->inserted));
+				$comment->avatar = $comment->avatar ?? ($comment->gender === 'F' ? 'chica' : 'hombre');
 			}
 
 			$article->isGuest = $request->person->isGuest;
@@ -150,12 +151,13 @@ class Service
 
 	public function _comentarios(Request $request, Response $response)
 	{
-		$comments = Database::query("SELECT A.*, B.username, B.avatar, C.title, C.pubDate, C.author FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id LEFT JOIN _tecnologia_articles C ON C.id = A.id_article ORDER BY A.id DESC LIMIT 20");
+		$comments = Database::query("SELECT A.*, B.username, B.avatar, B.avatarColor, B.gender, C.title, C.pubDate, C.author FROM _tecnologia_comments A LEFT JOIN person B ON A.id_person = B.id LEFT JOIN _tecnologia_articles C ON C.id = A.id_article ORDER BY A.id DESC LIMIT 20");
 
 		foreach ($comments as $comment) {
 			$comment->inserted = date('d/m/Y · h:i a', strtotime($comment->inserted));
 			$comment->pubDate = self::toEspMonth(date('j F, Y', strtotime($comment->pubDate)));
 			$comment->title = quoted_printable_decode($comment->title);
+			$comment->avatar = $comment->avatar ?? ($comment->gender === 'F' ? 'chica' : 'hombre');
 		}
 
 		$content = [

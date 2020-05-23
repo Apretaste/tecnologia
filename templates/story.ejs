@@ -45,8 +45,9 @@
 <ul class="collection" id="comments">
     <% comments.forEach(function (comment) { %>
         <li class="collection-item avatar">
-            <span style="background-color: <%= getRandomColor() %>"
-                  class="circle"> <%= comment.username[0].toUpperCase() %> </span>
+            <div class="person-avatar circle"
+                 face="<%= comment.avatar %>" color="<%= comment.avatarColor %>"
+                 size="42"></div>
             <span class="title" style="color: #263238; font-weight: 500">@<%= comment.username %> &middot; <small
                         class="grey-ddc"><span style="color: #424242"><%= comment.inserted %></span></small></span>
             <p><%= comment.content %></p>
