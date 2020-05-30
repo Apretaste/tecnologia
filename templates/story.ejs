@@ -52,7 +52,7 @@
             <span class="title" style="color: #263238; font-weight: 500"
                   onclick="openProfile('<%= comment.username %>')">@<%= comment.username %> &middot; <small
                         class="grey-ddc"><span style="color: #424242"><%= comment.inserted %></span></small></span>
-            <p><%= comment.content %></p>
+            <p style="word-break: break-all"><%= comment.content %></p>
         </li>
     <% }) %>
 
