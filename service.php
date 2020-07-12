@@ -6,6 +6,7 @@ use Apretaste\Response;
 use Framework\Alert;
 use Framework\Crawler;
 use Framework\Database;
+use Apretaste\Challenges;
 
 class Service
 {
@@ -42,14 +43,18 @@ class Service
 				if (!file_exists($imgPath)) {
 					$image = Crawler::get($article->imageLink, 'GET', null, [], [], $info);
 
-					if ($info['http_code'] ?? 404 === 200)
-						if (!empty($image))
+					if ($info['http_code'] ?? 404 === 200) {
+						if (!empty($image)) {
 							file_put_contents($imgPath, $image);
+						}
+					}
 				} else {
 					$image = file_get_contents($imgPath);
 				}
 
-				if (!empty($image)) $images[] = $imgPath;
+				if (!empty($image)) {
+					$images[] = $imgPath;
+				}
 			} else {
 				$article->image = "no-image.png";
 			}
@@ -113,7 +118,14 @@ class Service
 			// get the image if exist
 			$source = str_replace(' ', '_', $article->source);
 			$techImgDir = SHARED_PUBLIC_PATH . 'content/tecnologia';
-			if (!empty($article->image)) $images[] = "$techImgDir/{$source}/{$article->image}";
+			if (!empty($article->image)) {
+				$images[] = "$techImgDir/{$source}/{$article->image}";
+			}
+
+			// challenges
+			Challenges::track('tecnologia-5', $request->person->id, 0, static function ($track) {
+				return $track + 1;
+			});
 
 			// send info to the view
 			$response->setCache('30');
@@ -201,7 +213,9 @@ class Service
 		if ($articleId) {
 			// check the note ID is valid
 			$article = Database::query("SELECT COUNT(*) AS total FROM _tecnologia_articles WHERE id='$articleId'");
-			if ($article[0]->total == "0") return;
+			if ($article[0]->total == "0") {
+				return;
+			}
 
 			// save the comment
 			$comment = Database::escape($comment, 255);
