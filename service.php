@@ -123,7 +123,7 @@ class Service
 			}
 
 			// challenges
-			Challenges::track('tecnologia-5', $request->person->id, 0, static function ($track) {
+			Challenges::track($request->person->id, 'tecnologia-5', 0, static function ($track) {
 				return $track + 1;
 			});
 
