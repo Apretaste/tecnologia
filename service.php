@@ -123,15 +123,20 @@ class Service
 			}
 
 			// challenges
-			Challenges::track($request->person->id, 'tecnologia-5', [], static function ($track) use ($request) {
-				if (!is_array($track)) {
+			Challenges::track($request->person->id, 'tecnologia-5', [], static function ($track) use ($id) {
+
+			    if (!is_array($track)) {
 					$track = [];
 				}
-				$track[$request->input->data->id] = true;
-				if (count($track) >= 5) {
-					return 5;
+
+				if ($id) {
+					$track[$id] = true;
+					if (count($track) >= 5) {
+						return 5;
+					}
 				}
-				return $track + 1;
+
+				return $track;
 			});
 
 			// send info to the view
